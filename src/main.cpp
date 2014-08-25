@@ -78,6 +78,20 @@ int64_t nTransactionFee = MIN_TX_FEE;
 int64_t nReserveBalance = 0;
 int64_t nMinimumInputValue = 0;
 
+static const int NUM_OF_POW_CHECKPOINT = 9;
+static const int checkpointPoWHeight[NUM_OF_POW_CHECKPOINT][2] =
+{
+	{ 20000, 13524},
+	{ 40001, 21625},
+	{ 60000, 27964},
+	{ 80000, 35411},
+	{100000, 42507},
+	{120000, 49918},
+	{140000, 56173},
+	{160000, 62633},
+	{180001, 68070},
+};
+
 extern enum Checkpoints::CPMode CheckpointsMode;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -986,14 +1000,57 @@ int GetSpecialHeight(const CBlockIndex* pindex, bool fProofOfStake)
     return count;
 }
 
+
+static int FINAL_POW_HEIGHT = 180002;
+static int FINAL_POW_COUNT = 68070;
 int GetPowHeight(const CBlockIndex* pindex)
 {
-	return GetSpecialHeight(pindex, false);
+	int count = 0;
+	int height = pindex->nHeight;
+	int maxCheck = height;
+	int index = -1;
+	const CBlockIndex* pindex0 = pindex;
+
+	if(height > FINAL_POW_HEIGHT)
+		return FINAL_POW_COUNT;
+
+	if(NUM_OF_POW_CHECKPOINT != 0)
+	{
+		for(int i = 1; i <= NUM_OF_POW_CHECKPOINT; i++)
+		{
+			if(height > checkpointPoWHeight[NUM_OF_POW_CHECKPOINT - i][0])
+			{
+				index = NUM_OF_POW_CHECKPOINT - i;
+				break;
+			}
+		}
+	}
+
+	if(index != -1)
+		maxCheck = height - checkpointPoWHeight[index][0];
+
+    for(int j = 0; j < maxCheck; j++)
+	{
+		if(!pindex->IsProofOfStake())
+			++count;
+
+        pindex = pindex->pprev;
+	}
+
+	if(index != -1)
+		count += checkpointPoWHeight[index][1];
+	else
+		++count;
+
+	// printf(">> Height = %d, Count = %d\n", height, count);
+    return count;
 }
+
 
 int GetPosHeight(const CBlockIndex* pindex)
 {
-	return GetSpecialHeight(pindex, true);
+	int posH = pindex->nHeight - GetPowHeight(pindex);
+	return posH;
 }
 
 
@@ -1009,6 +1066,8 @@ int64_t GetProofOfWorkReward(int nHeight, int64_t nFees, const CBlockIndex* pind
 		return 0;
 
 	int nPoWHeight = GetPowHeight(pindex) + 1;
+	printf(">> nHeight = %d, nPoWHeight = %d\n", nHeight, nPoWHeight);
+
 	nSubsidy >>= nPoWHeight / 14400;
 
     return nSubsidy + nFees;

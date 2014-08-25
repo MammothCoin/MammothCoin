@@ -1128,18 +1128,13 @@ void MapPort()
 
 
 
-
-
-
-
-
-
 // DNS seeds
 // Each pair gives a source name and a seed name.
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
 static const char *strDNSSeed[][2] = {
-    {"seed1.MammothCoin.info", "seed1.MammothCoin.info"}
+    {"app.mammothcoin.org", "app.mammothcoin.org"},
+	{"node.mammothcoin.org", "node.mammothcoin.org"},
 };
 
 void ThreadDNSAddressSeed(void* parg)
